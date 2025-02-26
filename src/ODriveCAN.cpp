@@ -106,12 +106,34 @@ bool ODriveCAN::setTrapezoidalAccelLimits(float accel_limit, float decel_limit) 
     return send(msg);
 }
 
+Get_Iq_msg_t* ODriveCAN::getLastCurrents(const bool return_stale) {
+    if (!state_.has_new_iq && !return_stale)
+        return nullptr;
+    state_.has_new_iq = false;
+    return &state_.iq;
+}
+
+// Should really be call requestCurrents but changing the name would be a breaking change
 bool ODriveCAN::getCurrents(Get_Iq_msg_t& msg, uint16_t timeout_ms) {
     return request(msg, timeout_ms);
 }
 
+Get_Temperature_msg_t* ODriveCAN::getLastTemperature(const bool return_stale) {
+    if (!state_.has_new_temperature && !return_stale)
+        return nullptr;
+    state_.has_new_temperature = false;
+    return &state_.temperature;
+}
+
 bool ODriveCAN::getTemperature(Get_Temperature_msg_t& msg, uint16_t timeout_ms) {
     return request(msg, timeout_ms);
+}
+
+Get_Error_msg_t* ODriveCAN::getLastErrors(const bool return_stale) {
+    if (!state_.has_new_errors && !return_stale)
+        return nullptr;
+    state_.has_new_errors = false;
+    return &state_.errors;
 }
 
 bool ODriveCAN::getError(Get_Error_msg_t& msg, uint16_t timeout_ms) {
@@ -122,12 +144,33 @@ bool ODriveCAN::getVersion(Get_Version_msg_t& msg, uint16_t timeout_ms) {
     return request(msg, timeout_ms);
 }
 
+Get_Encoder_Estimates_msg_t* ODriveCAN::getLastFeedback(const bool return_stale) {
+    if (!state_.has_new_feedback && !return_stale)
+        return nullptr;
+    state_.has_new_feedback = false;
+    return &state_.feedback;
+}
+
 bool ODriveCAN::getFeedback(Get_Encoder_Estimates_msg_t& msg, uint16_t timeout_ms) {
     return request(msg, timeout_ms);
 }
 
+Get_Bus_Voltage_Current_msg_t* ODriveCAN::getLastBusVI(const bool return_stale) {
+    if (!state_.has_new_bus_v_i && !return_stale)
+        return nullptr;
+    state_.has_new_bus_v_i = false;
+    return &state_.bus_v_i;
+}
+
 bool ODriveCAN::getBusVI(Get_Bus_Voltage_Current_msg_t& msg, uint16_t timeout_ms) {
     return request(msg, timeout_ms);
+}
+
+Get_Powers_msg_t* ODriveCAN::getLastPower(const bool return_stale) {
+    if (!state_.has_new_powers && !return_stale)
+        return nullptr;
+    state_.has_new_powers = false;
+    return &state_.powers;
 }
 
 bool ODriveCAN::getPower(Get_Powers_msg_t& msg, uint16_t timeout_ms) {
@@ -151,6 +194,8 @@ void ODriveCAN::onReceive(uint32_t id, uint8_t length, const uint8_t* data) {
         case Get_Encoder_Estimates_msg_t::cmd_id: {
             Get_Encoder_Estimates_msg_t estimates;
             estimates.decode_buf(data);
+            state_.has_new_feedback = true;
+            state_.feedback.decode_buf(data);
             if (feedback_callback_)
                 feedback_callback_(estimates, feedback_user_data_);
             break;
@@ -158,6 +203,8 @@ void ODriveCAN::onReceive(uint32_t id, uint8_t length, const uint8_t* data) {
         case Get_Torques_msg_t::cmd_id: {
             Get_Torques_msg_t estimates;
             estimates.decode_buf(data);
+            state_.has_new_torques = true;
+            state_.torques.decode_buf(data);
             if (torques_callback_)
                 torques_callback_(estimates, torques_user_data_);
             break;
@@ -165,10 +212,40 @@ void ODriveCAN::onReceive(uint32_t id, uint8_t length, const uint8_t* data) {
         case Heartbeat_msg_t::cmd_id: {
             Heartbeat_msg_t status;
             status.decode_buf(data);
+            state_.has_new_status = true;
+            state_.status.decode_buf(data);
             if (axis_state_callback_ != nullptr)
                 axis_state_callback_(status, axis_state_user_data_);
             else
                 Serial.println(F("missing callback"));
+            break;
+        }
+        case Get_Bus_Voltage_Current_msg_t::cmd_id: {
+            Get_Bus_Voltage_Current_msg_t bus_v_i;
+            bus_v_i.decode_buf(data);
+            state_.has_new_bus_v_i = true;
+            state_.bus_v_i.decode_buf(data);
+            break;
+        }
+        case Get_Error_msg_t::cmd_id: {
+            Get_Error_msg_t errors;
+            errors.decode_buf(data);
+            state_.has_new_errors = true;
+            state_.errors.decode_buf(data);
+            break;
+        }
+        case Get_Temperature_msg_t::cmd_id: {
+            Get_Temperature_msg_t temperature;
+            temperature.decode_buf(data);
+            state_.has_new_temperature = true;
+            state_.temperature.decode_buf(data);
+            break;
+        }
+        case Get_Iq_msg_t::cmd_id: {
+            Get_Iq_msg_t iq;
+            iq.decode_buf(data);
+            state_.has_new_powers = true;
+            state_.powers.decode_buf(data);
             break;
         }
         default: {

@@ -132,6 +132,15 @@ public:
      */
     bool setTrapezoidalAccelLimits(float accel_limit, float decel_limit);
 
+
+    /**
+     * @brief Returns the data received from the last periodic current message sent by the ODrive.
+     *
+     * @param return_stale If true, the function will return the last received data even if it's already been read
+     * @return A pointer to the last received current data, or nullptr if no new data has been received
+     */
+    Get_Iq_msg_t* getLastCurrents(bool return_stale = false);
+
     /**
      * @brief Requests motor current.  Iq_measured represents torque-generating current
      * 
@@ -140,11 +149,25 @@ public:
     bool getCurrents(Get_Iq_msg_t& msg, uint16_t timeout_ms = 10);
 
     /**
+     * @brief Returns the data received from the last periodic temperature message sent by the ODrive.
+     * @param return_stale If true, the function will return the last received data even if it's already been read
+     * @return A pointer to the last received temperature data, or nullptr if no new data has been received
+     */
+    Get_Temperature_msg_t* getLastTemperature(bool return_stale = false);
+
+    /**
      * @brief Requests motor temperature 
      * 
      * This function will block and wait for up to timeout_ms (default 10msec) for ODrive to reply
      */
     bool getTemperature(Get_Temperature_msg_t& msg, uint16_t timeout_ms = 10);
+
+    /**
+     * @brief Returns the data received from the last periodic error message sent by the ODrive.
+     * @param return_stale If true, the function will return the last received data even if it's already been read
+     * @return A pointer to the last received error data, or nullptr if no new data has been received
+     */
+    Get_Error_msg_t* getLastErrors(bool return_stale = false);
 
     /**
      * @brief Requests error information
@@ -161,6 +184,13 @@ public:
     bool getVersion(Get_Version_msg_t& msg, uint16_t timeout_ms = 10);
 
     /**
+     * @brief Returns the data received from the last periodic encoder estimate message sent by the ODrive.
+     * @param return_stale If true, the function will return the last received data even if it's already been read
+     * @return A pointer to the last received encoder estimate data, or nullptr if no new data has been received
+     */
+    Get_Encoder_Estimates_msg_t* getLastFeedback(bool return_stale = false);
+
+    /**
      * @brief Requests encoder feedback data.  May trigger onFeedback callback if it's registered
      * 
      * This function will block and wait for up to timeout_ms (default 10msec) for ODrive to reply
@@ -168,11 +198,25 @@ public:
     bool getFeedback(Get_Encoder_Estimates_msg_t& msg, uint16_t timeout_ms = 10);
 
     /**
+     * @brief Returns the data received from the last periodic bus voltage and current message sent by the ODrive.
+     * @param return_stale If true, the function will return the last received data even if it's already been read
+     * @return A pointer to the last received bus voltage and current data, or nullptr if no new data has been received
+     */
+    Get_Bus_Voltage_Current_msg_t* getLastBusVI(bool return_stale = false);
+
+    /**
      * @brief Requests ODrive DC bus voltage and current
      * 
      * This function will block and wait for up to timeout_ms (default 10msec) for ODrive to reply
      */
     bool getBusVI(Get_Bus_Voltage_Current_msg_t& msg, uint16_t timeout_ms = 10);
+
+    /**
+     * @brief Returns the data received from the last periodic power message sent by the ODrive.
+     * @param return_stale If true, the function will return the last received data even if it's already been read
+     * @return A pointer to the last received power data, or nullptr if no new data has been received
+     */
+    Get_Powers_msg_t* getLastPower(bool return_stale = false);
 
     /**
      * @brief Requests mechanical and electrical power data (used for spinout detection)
@@ -317,6 +361,48 @@ public:
     }
 
 private:
+
+    struct ODriveState {
+        Heartbeat_msg_t status;
+        Get_Encoder_Estimates_msg_t feedback;
+        Get_Iq_msg_t iq;
+        Get_Torques_msg_t torques;
+        Get_Error_msg_t errors;
+        Get_Temperature_msg_t temperature;
+        Get_Bus_Voltage_Current_msg_t bus_v_i;
+        Get_Powers_msg_t powers;
+        bool has_new_status : 1;
+        bool has_new_feedback : 1;
+        bool has_new_iq : 1;
+        bool has_new_torques : 1;
+        bool has_new_errors : 1;
+        bool has_new_temperature : 1;
+        bool has_new_bus_v_i : 1;
+        bool has_new_powers : 1;
+
+        ODriveState() {
+            status = {};
+            feedback = {};
+            iq = {};
+            torques = {};
+            errors = {};
+            temperature = {};
+            bus_v_i = {};
+            powers = {};
+            has_new_status = false;
+            has_new_feedback = false;
+            has_new_iq = false;
+            has_new_torques = false;
+            has_new_errors = false;
+            has_new_temperature = false;
+            has_new_bus_v_i = false;
+            has_new_powers = false;
+        }
+
+    };
+
+    ODriveState state_;
+
     bool awaitMsg(uint16_t timeout_ms);
 
     ODriveCanIntfWrapper can_intf_;
