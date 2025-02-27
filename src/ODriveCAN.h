@@ -371,14 +371,14 @@ private:
         Get_Temperature_msg_t temperature;
         Get_Bus_Voltage_Current_msg_t bus_v_i;
         Get_Powers_msg_t powers;
-        bool has_new_status : 1;
-        bool has_new_feedback : 1;
-        bool has_new_iq : 1;
-        bool has_new_torques : 1;
-        bool has_new_errors : 1;
-        bool has_new_temperature : 1;
-        bool has_new_bus_v_i : 1;
-        bool has_new_powers : 1;
+        bool has_new_status;
+        bool has_new_feedback;
+        bool has_new_iq;
+        bool has_new_torques;
+        bool has_new_errors;
+        bool has_new_temperature;
+        bool has_new_bus_v_i;
+        bool has_new_powers;
 
         ODriveState() {
             status = {};
@@ -401,7 +401,7 @@ private:
 
     };
 
-    ODriveState state_;
+    ODriveState state_ = {};
 
     bool awaitMsg(uint16_t timeout_ms);
 
